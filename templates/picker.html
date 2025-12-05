@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Client1 – Choisir</title>
+  <link rel="stylesheet" href="/static/main.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Client1 – Choisir le nombre</h1>
+    <div class="card">
+      <label for="secret">Nombre secret (0–100)</label>
+      <input id="secret" type="number" min="0" max="100" />
+      <button id="btn-set">Valider</button>
+      <div id="status" class="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>Informations de partie</h2>
+      <p id="game-info">En attente…</p>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.socket.io/3.1.3/socket.io.min.js"></script>
+  <script>
+    const sio = io();
+    const statusEl = document.getElementById('status');
+    const infoEl = document.getElementById('game-info');
+    const btn = document.getElementById('btn-set');
+    const input = document.getElementById('secret');
+
+    sio.on('connect', () => {
+      sio.emit('register_picker');
+    });
+
+    sio.on('picker_registered', () => {
+      statusEl.textContent = 'Connecté comme Client1. Saisis ton nombre et clique Valider.';
+    });
+
+    btn.addEventListener('click', () => {
+      const val = parseInt(input.value, 10);
+      sio.emit('set_secret', { number: val });
+    });
+
+    sio.on('secret_ok', () => {
+      statusEl.textContent = 'Nombre enregistré. Le Devin peut commencer.';
+      infoEl.textContent = 'Partie en cours. Attente des essais du Client2…';
+    });
+
+    sio.on('game_over', (data) => {
+      infoEl.textContent = `Bravo ! Le devin a trouvé en ${data.attempts} essais (secret = ${data.secret}).`;
+    });
+
+    sio.on('error_msg', (e) => {
+      statusEl.textContent = e.error || 'Erreur.';
+    });
+  </script>
+</body>
+</html>

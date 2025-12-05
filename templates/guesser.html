@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Client2 – Deviner</title>
+  <link rel="stylesheet" href="/static/main.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Client2 – Deviner le nombre</h1>
+
+    <div class="card">
+      <div id="phase">Connexion…</div>
+      <div class="row">
+        <input id="guess" type="number" min="0" max="100" placeholder="Essai (0–100)" disabled />
+        <button id="btn-try" disabled>Essayer</button>
+      </div>
+      <div id="feedback" class="status"></div>
+    </div>
+  </div>
+
+  <!-- ✔ BONNE VERSION DE SOCKET.IO CLIENT -->
+  <script src="https://cdn.socket.io/3.1.3/socket.io.min.js"></script>
+
+  <script>
+    const sio = io();
+    const phase = document.getElementById('phase');
+    const input = document.getElementById('guess');
+    const btn = document.getElementById('btn-try');
+    const feedback = document.getElementById('feedback');
+
+    sio.on('connect', () => {
+      sio.emit('register_guesser');
+    });
+
+    sio.on('guesser_registered', () => {
+      phase.textContent = 'Inscrit comme Client2. En attente du nombre secret…';
+    });
+
+    sio.on('start_guessing', () => {
+      phase.textContent = 'Le jeu commence ! Propose un nombre.';
+      input.disabled = false;
+      btn.disabled = false;
+      input.focus();
+    });
+
+    btn.addEventListener('click', () => {
+      const val = parseInt(input.value, 10);
+      sio.emit('guess', { number: val });
+      input.value = '';
+      input.focus();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btn.click();
+    });
+
+    sio.on('feedback', (res) => {
+      if (res.result === 'HIGH') {
+        feedback.textContent = 'Grand';
+      } else if (res.result === 'LOW') {
+        feedback.textContent = 'Petit';
+      } else if (res.result === 'BRAVO') {
+        feedback.textContent = `Bravo ! Trouvé en ${res.attempts} essais.`;
+        input.disabled = true;
+        btn.disabled = true;
+      } else if (res.result === 'ERROR') {
+        feedback.textContent = res.message || 'Erreur.';
+      }
+    });
+
+    sio.on('error_msg', (e) => {
+      feedback.textContent = e.error || 'Erreur.';
+    });
+  </script>
+</body>
+</html>
